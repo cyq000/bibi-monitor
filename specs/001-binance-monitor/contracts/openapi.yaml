@@ -1,0 +1,107 @@
+openapi: 3.0.3
+info:
+  title: Binance Taker Volume Monitor API
+  version: 1.0.0
+  description: API for inspecting monitor health, metrics and notification history.
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /health:
+    get:
+      summary: Service health
+      responses:
+        '200':
+          description: OK
+
+  /metrics/{symbol}:
+    get:
+      summary: Get latest window metrics for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Window metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WindowMetricList'
+
+  /notifications:
+    get:
+      summary: Query notifications
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: list of notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationList'
+
+components:
+  schemas:
+    WindowMetric:
+      type: object
+      properties:
+        symbol:
+          type: string
+        window_type:
+          type: string
+        window_start:
+          type: string
+          format: date-time
+        window_end:
+          type: string
+          format: date-time
+        buy_taker_volume:
+          type: number
+        sell_taker_volume:
+          type: number
+        total_volume:
+          type: number
+        score_a:
+          type: number
+
+    WindowMetricList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WindowMetric'
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        event_id:
+          type: string
+        payload:
+          type: object
+        status:
+          type: string
+        attempts:
+          type: integer
+        sent_at:
+          type: string
+          format: date-time
+
+    NotificationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'

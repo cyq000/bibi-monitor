@@ -1,0 +1,5 @@
+# If this project is published as an npm package, ignore these
+node_modules/
+dist/
+build/
+*.log

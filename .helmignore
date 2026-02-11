@@ -1,0 +1,5 @@
+# Helm charts
+.helm/
+charts/
+*.tgz
+*.secret.yaml

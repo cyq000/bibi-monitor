@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+__pypackages__/
+
+# Byte-compiled / optimized / DLL files
+*.so
+*.dylib
+
+# VSCode / IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.*
+.secrets
+
+# SQLite
+*.db
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+Dockerfile*
+
+# Coverage
+htmlcov/
+.coverage
+coverage.xml
+
+# Node (if present for frontend/tools)
+node_modules/
+dist/

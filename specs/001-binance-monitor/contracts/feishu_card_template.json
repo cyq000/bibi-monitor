@@ -1,0 +1,31 @@
+{
+  "title": "币种异常监控通知示例",
+  "msg_type": "interactive",
+  "card": {
+    "config": { "wide_screen_mode": true },
+    "header": { "title": { "tag": "plain_text", "content": "币安合约监控告警" } },
+    "elements": [
+      {
+        "tag": "div",
+        "fields": [
+          { "is_short": true, "text": { "tag": "lark_md", "content": "**币种**：BTCUSDT" } },
+          { "is_short": true, "text": { "tag": "lark_md", "content": "**窗口**：1h" } }
+        ]
+      },
+      {
+        "tag": "div",
+        "fields": [
+          { "text": { "tag": "lark_md", "content": "**买方主动量(USDT)**：12,345,678" } },
+          { "text": { "tag": "lark_md", "content": "**卖方主动量(USDT)**：3,210,000" } }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "note",
+        "elements": [ { "tag": "plain_text", "content": "得分A：79.4 — 满足阈值，已记录并通知。" } ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+# Ignore Python artifacts
+**/__pycache__/
+**/*.pyc
+
+# Git
+.git
+
+# Env files
+.env
+.env.*
+
+# Node
+node_modules
+
+# Logs
+*.log
+
+# Docker
+Dockerfile*

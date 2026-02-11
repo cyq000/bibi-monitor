@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # 应用主服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: binance-monitor
+    environment:
+      # 飞书配置
+      FEISHU_WEBHOOK: ${FEISHU_WEBHOOK:-}
+      SEND_REAL: ${SEND_REAL:-0}
+      
+      # 数据库配置
+      DB_URL: postgresql://monitor:monitor_pass@db:5432/binance_monitor
+      
+      # 日志配置
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # API 配置
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      
+      # 监控阈值
+      SCORE_THRESHOLD: ${SCORE_THRESHOLD:-2.0}
+      VOLUME_MIN: ${VOLUME_MIN:-10000000}
+      VOLUME_MAX: ${VOLUME_MAX:-80000000}
+      
+      # 守护进程配置
+      DAEMON_INTERVAL_SECONDS: ${DAEMON_INTERVAL_SECONDS:-3600}
+    
+    ports:
+      - "8000:8000"  # API HTTP 端口
+    
+    volumes:
+      - ./src:/app/src:ro
+      - ./scripts:/app/scripts:ro
+      - ./data:/app/data
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    networks:
+      - monitor-network
+    
+    restart: unless-stopped
+    
+    # 可选：调试模式
+    # command: python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # PostgreSQL 数据库 (可选，默认使用 SQLite)
+  db:
+    image: postgres:15-alpine
+    container_name: binance-monitor-db
+    environment:
+      POSTGRES_DB: binance_monitor
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: monitor_pass
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    
+    ports:
+      - "5432:5432"
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    
+    networks:
+      - monitor-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor -d binance_monitor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    restart: unless-stopped
+
+  # Redis (可选，用于缓存和消息队列)
+  redis:
+    image: redis:7-alpine
+    container_name: binance-monitor-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - monitor-network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    profiles:
+      - with-redis
+
+  # Prometheus (可选，用于监控指标收集)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: binance-monitor-prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitor-network
+    volumes:
+      - ./scripts/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    profiles:
+      - with-monitoring
+
+  # Grafana (可选，用于指标可视化)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: binance-monitor-grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitor-network
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    profiles:
+      - with-monitoring
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  monitor-network:
+    driver: bridge

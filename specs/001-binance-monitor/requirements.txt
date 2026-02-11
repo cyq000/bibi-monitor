@@ -1,0 +1,14 @@
+# Runtime dependencies for implementation
+# - aiohttp: async HTTP & WebSocket client
+# - websockets: alternative WebSocket client
+# - ccxt (async): optional Binance REST helper
+# - python-dotenv: load .env in development
+# - SQLAlchemy: ORM for storage
+# - requests: optional sync HTTP
+aiohttp>=3.8
+websockets>=10.0
+ccxt>=3.0
+python-dotenv>=1.0
+SQLAlchemy>=1.4
+requests>=2.0
+

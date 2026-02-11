@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  COVERAGE_THRESHOLD: 75  # 覆盖率阈值
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov coverage sqlalchemy requests python-dotenv pydantic fastapi httpx
+          # if repository provides a requirements.txt, install it
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=src --cov-report=xml --cov-report=term-missing tests/
+          
+      - name: Check coverage threshold
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          coverage = float(root.get('line-rate')) * 100
+          threshold = float('${{ env.COVERAGE_THRESHOLD }}')
+          print(f'📊 实际覆盖率: {coverage:.1f}%')
+          print(f'🎯 目标覆盖率: {threshold:.1f}%')
+          if coverage < threshold:
+            print(f'❌ 覆盖率低于阈值！差距: {threshold - coverage:.1f}%')
+            exit(1)
+          else:
+            print('✅ 覆盖率符合要求')
+          "
+      
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Type check with mypy
+        run: |
+          pip install mypy sqlalchemy-stubs
+          mypy src --ignore-missing-imports || true
+
+      - name: Upload coverage reports
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+      - name: Build Docker image
+        if: success()
+        run: |
+          docker build -t binance-monitor:${{ github.sha }} .
+          docker image ls
+
+      - name: Test Docker image
+        if: success()
+        run: |
+          docker run --rm binance-monitor:${{ github.sha }} python -m pytest --version
+          docker run --rm binance-monitor:${{ github.sha }} python -c "from src.config_manager import ConfigManager; print('✓ Imports OK')"

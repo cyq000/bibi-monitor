@@ -1,0 +1,25 @@
+{
+  "score_threshold": 2.0,
+  "volume_min": 10000000,
+  "volume_max": 80000000,
+  "per_symbol_thresholds": {
+    "ETHUSDT": {
+      "score_threshold": 1.0,
+      "volume_min": 1000000
+    },
+    "BTCUSDT": {
+      "score_threshold": 2.5
+    }
+  },
+  "enable_discovery": true,
+  "discovery_interval_seconds": 86400,
+  "discovery_excluded_symbols": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ],
+  "discovery_max_symbols": null,
+  "_metadata": {
+    "saved_at": "2026-02-11T13:53:14.438960",
+    "version": "0.1.0"
+  }
+}
