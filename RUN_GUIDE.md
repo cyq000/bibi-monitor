@@ -197,6 +197,166 @@ EOF
 
 ---
 
+### 🎯 启动脚本管理
+
+#### 创建启动脚本 (Linux/Mac)
+
+创建文件 `manage_api.sh`：
+
+```bash
+cat > manage_api.sh << 'EOF'
+#!/bin/bash
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$PROJECT_DIR/logs"
+VENV="$PROJECT_DIR/.venv"
+PID_FILE="$LOG_DIR/api.pid"
+PORT=8000
+
+# 创建日志目录
+mkdir -p "$LOG_DIR"
+
+case "$1" in
+  start)
+    # 检查进程是否已运行
+    if [ -f "$PID_FILE" ]; then
+        OLD_PID=$(cat "$PID_FILE")
+        if ps -p $OLD_PID > /dev/null 2>&1; then
+            echo "❌ API 服务器已在运行 (PID: $OLD_PID)"
+            exit 1
+        fi
+    fi
+    
+    echo "🚀 启动 API 服务器..."
+    nohup "$VENV/bin/python" -m uvicorn src.api.main:app \
+        --host 127.0.0.1 \
+        --port $PORT \
+        > "$LOG_DIR/api.log" 2>&1 &
+    
+    NEW_PID=$!
+    echo $NEW_PID > "$PID_FILE"
+    
+    echo "✅ API 服务器已启动 (PID: $NEW_PID)"
+    echo "📍 日志位置: $LOG_DIR/api.log"
+    echo "💡 查看日志: tail -f $LOG_DIR/api.log"
+    ;;
+    
+  stop)
+    PID=$(lsof -ti :$PORT 2>/dev/null || netstat -tlnp 2>/dev/null | grep :$PORT | awk '{print $NF}' | cut -d'/' -f1)
+    if [ ! -z "$PID" ]; then
+      kill $PID 2>/dev/null
+      rm -f "$PID_FILE"
+      echo "✅ API 服务器已停止 (PID: $PID)"
+    else
+      echo "❌ API 服务器未运行"
+    fi
+    ;;
+    
+  restart)
+    $0 stop
+    sleep 2
+    $0 start
+    ;;
+    
+  status)
+    PID=$(lsof -ti :$PORT 2>/dev/null || netstat -tlnp 2>/dev/null | grep :$PORT | awk '{print $NF}' | cut -d'/' -f1)
+    if [ ! -z "$PID" ]; then
+      echo "✅ API 服务器正在运行 (PID: $PID)"
+      ps -p $PID
+    else
+      echo "❌ API 服务器未运行"
+    fi
+    ;;
+    
+  logs)
+    if [ -f "$LOG_DIR/api.log" ]; then
+      tail -f "$LOG_DIR/api.log"
+    else
+      echo "❌ 日志文件不存在: $LOG_DIR/api.log"
+    fi
+    ;;
+    
+  *)
+    echo "用法: $0 {start|stop|restart|status|logs}"
+    echo ""
+    echo "命令说明："
+    echo "  start    - 启动 API 服务器（后台运行）"
+    echo "  stop     - 停止 API 服务器"
+    echo "  restart  - 重启 API 服务器"
+    echo "  status   - 查看服务器状态"
+    echo "  logs     - 实时查看日志"
+    ;;
+esac
+EOF
+
+chmod +x manage_api.sh
+```
+
+#### 使用启动脚本
+
+```bash
+# 启动 API 服务器（后台运行）
+./manage_api.sh start
+# 输出: ✅ API 服务器已启动 (PID: xxxxx)
+#      📍 日志位置: logs/api.log
+
+# 查看服务器状态
+./manage_api.sh status
+# 输出: ✅ API 服务器正在运行 (PID: xxxxx)
+
+# 实时查看日志
+./manage_api.sh logs
+# 按 Ctrl+C 退出
+
+# 停止服务器
+./manage_api.sh stop
+# 输出: ✅ API 服务器已停止
+
+# 重启服务器
+./manage_api.sh restart
+```
+
+#### 推荐工作流程
+
+```bash
+# 1️⃣ 首次运行：初始化数据库
+python scripts/init_db.py
+
+# 2️⃣ 启动 API 服务器（后台）
+./manage_api.sh start
+
+# 3️⃣ 在另一个终端运行演示
+python scripts/demo_api.py
+
+# 4️⃣ 查看实时日志（可选）
+./manage_api.sh logs
+
+# 5️⃣ 检查服务器状态（可选）
+./manage_api.sh status
+
+# 6️⃣ 停止服务器（需要时）
+./manage_api.sh stop
+```
+
+#### 检查程序是否在运行
+
+```bash
+# 方式 1: 查看脚本状态
+./manage_api.sh status
+
+# 方式 2: 直接检查进程
+ps aux | grep uvicorn | grep -v grep
+
+# 方式 3: 检查端口
+lsof -i :8000
+
+# 方式 4: 测试 API
+curl http://127.0.0.1:8000/health
+# 成功返回: {"status":"healthy","timestamp":"..."}
+```
+
+---
+
 ### 🔧 常用操作
 
 #### 清除缓存
@@ -474,6 +634,15 @@ python -c "..."
 - [ ] 能成功调用 `/discovery/symbols` 端点
 - [ ] 能查看缓存状态 `/discovery/cache-status`
 - [ ] 演示脚本能成功运行 `python scripts/demo_api.py`
+
+---
+
+## 📚 相关快速参考
+
+- **[API 启动脚本快速参考](API_STARTUP_GUIDE.md)** - 使用 `manage_api.sh` 管理 API 服务的便捷指南
+  - 快速命令说明
+  - 常见问题排查
+  - 日志查看方法
 
 ---
 
